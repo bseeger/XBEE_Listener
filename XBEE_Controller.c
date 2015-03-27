@@ -24,6 +24,7 @@
 #include <stdio.h> 
 #include <string.h> 
 #include <stdlib.h> 
+#include <getopt.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <signal.h>
@@ -34,6 +35,11 @@
 
 #define MSB 0
 #define LSB 1
+
+#define TRUE 1
+#define FALSE 0
+
+int g_verbose = FALSE;
 
 typedef struct  {
     unsigned char number1[2];     /* 0, 1 */
@@ -55,13 +61,16 @@ typedef struct  {
 } XBEE_Message;
 
 #define TMP36_OFFSET_VOLTAGE 500  /* think 500 mv = 0 celsius */
-void TMP36_processor(unsigned char data1, unsigned char data2, XBEE_Message_Output *output) {
+void TMP36_processor(int id, unsigned char data1, unsigned char data2, XBEE_Message_Output *output) {
    
     int AD_dec = (data1 << 8) | data2;
     float AD_mv = ((AD_dec * VREF) / 1023) - TMP36_OFFSET_VOLTAGE;
     float celsius = (AD_mv / 10);    /* 10 mv per degree C */
     float fahrenheit = celsius * 1.8 + 32;
-    printf("Analog 1: A/D dec: %d   A/D mV: %g  %g C %g f\n", AD_dec, AD_mv, celsius, fahrenheit);
+    if (g_verbose) {
+        printf("Signal %d: A/D dec: %d   A/D mV: %g  %g C %g f\n", id, AD_dec, AD_mv, celsius, fahrenheit);
+    }
+    printf("Signal %d: %g f\n", id, fahrenheit);
    
     // check this here, so we can at least get printf's if the output is not set.  
     if (output) {
@@ -119,6 +128,9 @@ int main (int argc, char **argv) {
     
     struct sockaddr_in si_server;
     struct sockaddr_in si_mine;
+    
+    int option = 0;
+    int run_count = 1;
 
     int sockfd = 0;
     socklen_t sockaddr_len = sizeof(si_server);
@@ -132,12 +144,31 @@ int main (int argc, char **argv) {
     memset(&config, 0, sizeof(config));
     memset(&output, 0, sizeof(output));
 
+    void usage(char *progname) {
+        printf("Usage: \n\tXBEE_Controller %s [-c NUM]\n", progname);
+        printf("\n-c NUM    where NUM is the number of times to listen for data. Default: 1\n");
+    }
+
+    while ((option = getopt(argc, argv, "c:v")) != -1) {
+        switch(option) {
+            case 'c':  
+		run_count = atoi(optarg);
+		break;
+            case 'v':  
+	        g_verbose = TRUE;
+		break;
+            default:  usage(argv[0]);
+        }
+    }
+
+
     /* This directs the code to the right data processor, 
      * based on what is physically connected to your board. 
      * In my case, we have a TMP36 hooked up to analog 1  
      * and that is all. 
      */
     config.analog_processors[0] = &TMP36_processor;
+    config.analog_processors[1] = &TMP36_processor;
 
     /* register signal handler, so we can kill the program gracefully */
     if (signal(SIGINT, signal_handler) == SIG_ERR) {
@@ -162,24 +193,36 @@ int main (int argc, char **argv) {
         quit("Bind failed");
     }
 
-    printf("Listening on port %d now...\n", PORT);
-    while ((msgsize = recvfrom(sockfd, (unsigned char*)&message, sizeof(message), 0, (struct sockaddr *) &si_server, &sockaddr_len)) != -1) {
-        printf("Got message. It is %d bytes long\n", msgsize);
-        printf("-----\n");
-        print_XBEE_Message(&message);
+    if (g_verbose) {
+    	printf("Listening on port %d now...\n", PORT);
+    }
+
+    while (run_count > 0) {
+
+        if ((msgsize = recvfrom(sockfd, (unsigned char*)&message, sizeof(message), 0, (struct sockaddr *) &si_server, &sockaddr_len)) == -1) {
+            quit("Received bad packet. Goodbye!\n"); 
+        }
+    
+        if (g_verbose)  {
+            printf("Got message. It is %d bytes long\n", msgsize);
+            printf("-----\n");
+            print_XBEE_Message(&message);
+        }
 
         // verify that the first two numbers XOR into 0x4242
         unsigned char msb_fortytwo = message.number1[1] ^ message.number2[1];
         unsigned char lsb_fortytwo = message.number1[0] ^ message.number2[0];
 
-        printf("Sanity check (should be 0x4242) 0x%02X%02X\n", msb_fortytwo, lsb_fortytwo);
+        if (g_verbose) {
+            printf("Sanity check (should be 0x4242) 0x%02X%02X\n", msb_fortytwo, lsb_fortytwo);
+        }
         
         int sampleNo = 0;
         int spot = 0;
         if (message.digitalMask[MSB] & 0xFF || message.digitalMask[LSB] & 0xFF) { 
             // this is untested - I don't have anything on the DIO stuff. 
             if (config.digital_processor != NULL) {
-                config.digital_processor(message.samples[sampleNo], message.samples[sampleNo+1], &output);
+                config.digital_processor(sampleNo, message.samples[sampleNo], message.samples[sampleNo+1], &output);
             }
             // Always move past, since there is a digital sample, even if there is 
             // no processor for it. 
@@ -191,8 +234,10 @@ int main (int argc, char **argv) {
             if (message.analogMask & mask) { 
                 /* then run this spot! */
                 if (config.analog_processors[spot] != NULL) {
-                    printf("Processing analog signal %d. \n", spot+1);
-                    config.analog_processors[spot](message.samples[sampleNo], message.samples[sampleNo+1], &output);
+                    if (g_verbose) {
+                        printf("Processing analog signal %d. \n", spot+1);
+                    }
+                    config.analog_processors[spot](sampleNo, message.samples[sampleNo], message.samples[sampleNo+1], &output);
                 } else {
                     printf("Skipping analog signal %d: no processor registered for it.\n", spot+1);
                 }
@@ -203,9 +248,12 @@ int main (int argc, char **argv) {
         // TODO - ship off the XBEE_Message_Output to somewhwere. 
 
         memset(&message, 0, sizeof(message));
+        run_count -= 1;
    }
 
-
-    exit(EXIT_SUCCESS);
+   if (g_verbose) {
+   	printf("Goodbye!");
+   }
+   exit(EXIT_SUCCESS);
 }
 

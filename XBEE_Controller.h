@@ -34,8 +34,8 @@ typedef struct {
 } XBEE_Message_Output;
 
 typedef struct {
-    void (*digital_processor)(unsigned char data1, unsigned char data2, XBEE_Message_Output *output);
-    void (*analog_processors[16])(unsigned char data1, unsigned char data2, XBEE_Message_Output *output);
+    void (*digital_processor)(int id, unsigned char data1, unsigned char data2, XBEE_Message_Output *output);
+    void (*analog_processors[16])(int id, unsigned char data1, unsigned char data2, XBEE_Message_Output *output);
 
     // ... add more as needed
 } XBEE_Config; 

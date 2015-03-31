@@ -18,6 +18,10 @@
  * Currently supported devices: 
  *    1) TMP36   - callback: TMP36_processor
  *
+ *
+ * @TODO - add timeout so the client doesn't wait forever to 
+ *         get data from a potentially dead XBEE
+ *
  * 
  */
 
@@ -40,6 +44,7 @@
 #define FALSE 0
 
 int g_verbose = FALSE;
+int g_mo_mode = FALSE;  /* minimal output mode */
 
 typedef struct  {
     unsigned char number1[2];     /* 0, 1 */
@@ -70,7 +75,12 @@ void TMP36_processor(int id, unsigned char data1, unsigned char data2, XBEE_Mess
     if (g_verbose) {
         printf("Signal %d: A/D dec: %d   A/D mV: %g  %g C %g f\n", id, AD_dec, AD_mv, celsius, fahrenheit);
     }
-    printf("Signal %d: %g f\n", id, fahrenheit);
+
+    if (g_mo_mode) {
+        printf("%g,", fahrenheit);
+    } else {
+    	printf("Signal %d: %g f\n", id, fahrenheit);
+    }
    
     // check this here, so we can at least get printf's if the output is not set.  
     if (output) {
@@ -118,10 +128,16 @@ void print_XBEE_Message(XBEE_Message *message) {
     for (spot = 0; spot < 8; spot++) {
         unsigned char mask = 1 << spot;
         if (mask & message->analogMask) { 
-            printf("Analog 1:   %02X %02X\n", message->samples[sampleNo], message->samples[sampleNo+1]);
+            printf("Analog %d:   %02X %02X\n", sampleNo / 2, message->samples[sampleNo], message->samples[sampleNo+1]);
         }
         sampleNo += 2;
     }
+}
+
+void usage(char *progname) {
+    printf("Usage: \n\tXBEE_Controller %s [-c NUM]\n", progname);
+    printf("\t-c NUM    where NUM is the number of times to listen for data. Default: 1\n");
+    printf("\t-m 	minimal output mode, just output TMP1, TMP2, etc.\n");
 }
 
 int main (int argc, char **argv) {
@@ -131,6 +147,7 @@ int main (int argc, char **argv) {
     
     int option = 0;
     int run_count = 1;
+    int timeout = 30; /* seconds */
 
     int sockfd = 0;
     socklen_t sockaddr_len = sizeof(si_server);
@@ -144,23 +161,20 @@ int main (int argc, char **argv) {
     memset(&config, 0, sizeof(config));
     memset(&output, 0, sizeof(output));
 
-    void usage(char *progname) {
-        printf("Usage: \n\tXBEE_Controller %s [-c NUM]\n", progname);
-        printf("\n-c NUM    where NUM is the number of times to listen for data. Default: 1\n");
-    }
-
-    while ((option = getopt(argc, argv, "c:v")) != -1) {
+    while ((option = getopt(argc, argv, "c:mv")) != -1) {
         switch(option) {
             case 'c':  
-		run_count = atoi(optarg);
-		break;
+                run_count = atoi(optarg);
+                break;
+            case 'm':
+                g_mo_mode = TRUE;
+                break;
             case 'v':  
-	        g_verbose = TRUE;
-		break;
+                g_verbose = TRUE;
+                break;
             default:  usage(argv[0]);
         }
     }
-
 
     /* This directs the code to the right data processor, 
      * based on what is physically connected to your board. 
@@ -222,7 +236,7 @@ int main (int argc, char **argv) {
         if (message.digitalMask[MSB] & 0xFF || message.digitalMask[LSB] & 0xFF) { 
             // this is untested - I don't have anything on the DIO stuff. 
             if (config.digital_processor != NULL) {
-                config.digital_processor(sampleNo, message.samples[sampleNo], message.samples[sampleNo+1], &output);
+                config.digital_processor(sampleNo/2, message.samples[sampleNo], message.samples[sampleNo+1], &output);
             }
             // Always move past, since there is a digital sample, even if there is 
             // no processor for it. 
@@ -235,9 +249,9 @@ int main (int argc, char **argv) {
                 /* then run this spot! */
                 if (config.analog_processors[spot] != NULL) {
                     if (g_verbose) {
-                        printf("Processing analog signal %d. \n", spot+1);
+                        printf("Processing analog signal %d. \n", spot);
                     }
-                    config.analog_processors[spot](sampleNo, message.samples[sampleNo], message.samples[sampleNo+1], &output);
+                    config.analog_processors[spot](sampleNo/2, message.samples[sampleNo], message.samples[sampleNo+1], &output);
                 } else {
                     printf("Skipping analog signal %d: no processor registered for it.\n", spot+1);
                 }

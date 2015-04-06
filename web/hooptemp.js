@@ -44,7 +44,7 @@ function updateTempObj(obj, objHeader, tmp) {
    
     /* Change the background colors if the temperature is 
      * either 80 F or above, or 32 F or less. 
-     * This is to warn the user that there is danger of over-heading or frost 
+     * This is to warn the user that there is danger of over-heating or frost 
      * in the hoop house. 
      */
     if (tmp >= 80) {

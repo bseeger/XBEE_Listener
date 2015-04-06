@@ -259,7 +259,7 @@ int main (int argc, char **argv) {
             } 
         }
 
-        // TODO - ship off the XBEE_Message_Output to somewhwere. 
+        // TODO - ship off the XBEE_Message_Output to somewhere. 
 
         memset(&message, 0, sizeof(message));
         run_count -= 1;

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta name="description" content="Displays Hoop House Temperature Information">
+    <meta name="author" content="B. Seeger">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>Hoop House Temperature</title>
+
+    <script src="jquery-2.1.3.min.js"></script> 
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>    
+    <script src="hooptemp.js"></script>
+   
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css"> 
+    <!-- <link href="../bootstrap/css/bootstrap.min.css" rel="stylesheet"> -->
+
+    <!-- TODO Some considerations for other browers might need to be taken
+         (thinking of IE versions, specifically) -->
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="header clearfix">
+        <br> <br> <br>
+      </div>
+
+      <div class="panel panel-primary">
+        <div class="panel-heading text-center">
+          <h2>Hoop House Temperature Information</h2>
+        </div>
+
+        <div class="panel-body">
+          <div class="row">
+            <div class="col-sm-4">
+              <div class="alert alert-info" style="margin: 0px;">Temperature is too cold</div>
+              <div class="alert alert-success" style="margin: 0px;">Temperature is in safe range</div>
+              <div class="alert alert-danger" style="margin: 0px;">Temperature is too warm</div>
+                <br>
+                <!-- This is fun to have, but destroys the responsiveness of the website. Leaving in for now. -->
+                <span style="border-style: solid; border-width: 1px; border-color: #c9def2; display: block !important; width: 320px; text-align: center; font-family: sans-serif; font-size: 12px;"><a href="http://www.wunderground.com/cgi-bin/findweather/getForecast?query=zmw:01054.1.99999&bannertypeclick=wu_clean2day" title="Leverett, Massachusetts Weather Forecast" target="_blank"><img src="http://weathersticker.wunderground.com/weathersticker/cgi-bin/banner/ban/wxBanner?bannertype=wu_clean2day_cond&airportcode=KORE&ForcedCity=Leverett&ForcedState=MA&zip=01054&language=EN" alt="Find more about Weather in Leverett, MA" width="300" /></a><br><a href="http://www.wunderground.com/cgi-bin/findweather/getForecast?query=zmw:01054.1.99999&bannertypeclick=wu_clean2day" title="Get latest Weather Forecast updates" style="font-family: sans-serif; font-size: 12px" target="_blank">Click for weather forecast</a></span>
+            </div>
+            <div class="col-sm-1"></div>
+            <div class="col-sm-6">
+              </br>
+              <div id="tmp1-header" class="panel panel-success">
+                <div class="panel-heading">
+                  <h3 class="panel-title">Thermometer 1: &nbsp;&nbsp;&nbsp;Open</h3>
+                </div>
+                <div class="panel-body">
+                  <div id="tmp1">loading...</div>
+                </div>
+              </div>
+              </br>
+              <div id="tmp2-header" class="panel panel-success">
+                <div class="panel-heading">
+                  <h3 class="panel-title">Thermometer 2: &nbsp;&nbsp;&nbsp;Under Remay</h3>
+                </div>
+                <div class="panel-body">
+                  <div id="tmp2">loading...</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-sm-1"></div>
+          </div>
+          <div id="timestamp" class="text-right"></div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <p>&copy; Seeger Home Productions 2015</p>
+      </footer>
+    </div> <!-- /container -->
+  </body>
+</html>
+

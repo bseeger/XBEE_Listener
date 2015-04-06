@@ -18,18 +18,23 @@ function updateTemps() {
     /* data will look like this  "xx.xx, xx.xx," (yes, ugly trailing 
      * comma for the time being) 
      */
-    $.get("data/curval.txt",  function(data) {
+    $.get("../data/curval.txt",  function(data) {
         var dateObj = new Date();
         var tmps = data.split(",");
 
         var tmp1 = parseFloat(tmps[0]);
         var tmp2 = parseFloat(tmps[1]);
-         
         var tmp1_S = $("#tmp1"); 
         var tmp2_S = $("#tmp2");
-
         var tmp1_header_S = $("#tmp1-header");
         var tmp2_header_S = $("#tmp2-header");
+ 
+        if (isNaN(tmp1)) {
+            tmp1 = 0;
+        }
+        if (isNaN(tmp2)) { 
+            tmp2 = 0;
+        }
 
         updateTempObj(tmp1_S, tmp1_header_S, tmp1);
         updateTempObj(tmp2_S, tmp2_header_S, tmp2);
@@ -44,7 +49,7 @@ function updateTempObj(obj, objHeader, tmp) {
    
     /* Change the background colors if the temperature is 
      * either 80 F or above, or 32 F or less. 
-     * This is to warn the user that there is danger of over-heating or frost 
+     * This is to warn the user that there is danger of over-heading or frost 
      * in the hoop house. 
      */
     if (tmp >= 80) {
